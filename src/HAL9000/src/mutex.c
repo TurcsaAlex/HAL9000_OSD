@@ -52,10 +52,10 @@ MutexAcquire(
         Mutex->Holder = pCurrentThread;
         Mutex->CurrentRecursivityDepth = 1;
     }
-
     while (Mutex->Holder != pCurrentThread)
     {
-        InsertTailList(&Mutex->WaitingList, &pCurrentThread->ReadyList);
+        InsertOrderedList(&Mutex->WaitingList, &pCurrentThread->ReadyList, ThreadComparePriorityReadyList, NULL);
+        //InsertTailList(&Mutex->WaitingList, &pCurrentThread->ReadyList);
         ThreadTakeBlockLock();
         LockRelease(&Mutex->MutexLock, dummyState);
         ThreadBlock();

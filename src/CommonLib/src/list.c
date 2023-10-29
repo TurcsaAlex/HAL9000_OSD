@@ -158,6 +158,7 @@ InsertOrderedList(
     )
 {
     PLIST_ENTRY pCurrentEntry;
+    BOOLEAN inserted = FALSE;
 
 #ifdef DEBUG
     ASSERT(_ValidateListEntry(ListHead));
@@ -171,11 +172,15 @@ InsertOrderedList(
         if (CompareFunction(Entry, pCurrentEntry, Context) < 0)
         {
             // entry to insert is smaller than current entry
+            InsertTailList(pCurrentEntry, Entry); // Insert before the current entry
+            inserted = TRUE;
             break;
         }
     }
-
-    InsertTailList(pCurrentEntry, Entry);
+    if (!inserted)
+    {
+        InsertTailList(pCurrentEntry, Entry);
+    }
 }
 
 PTR_SUCCESS
