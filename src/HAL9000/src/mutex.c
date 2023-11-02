@@ -22,6 +22,7 @@ MutexInit(
     Mutex->MaxRecursivityDepth = Recursive ? MUTEX_MAX_RECURSIVITY_DEPTH : 1;
 }
 
+
 ACQUIRES_EXCL_AND_REENTRANT_LOCK(*Mutex)
 REQUIRES_NOT_HELD_LOCK(*Mutex)
 void
@@ -39,7 +40,6 @@ MutexAcquire(
     if (pCurrentThread == Mutex->Holder)
     {
         ASSERT( Mutex->CurrentRecursivityDepth < Mutex->MaxRecursivityDepth );
-
         Mutex->CurrentRecursivityDepth++;
         return;
     }
@@ -56,11 +56,17 @@ MutexAcquire(
     {
         InsertOrderedList(&Mutex->WaitingList, &pCurrentThread->ReadyList, ThreadComparePriorityReadyList, NULL);
         //InsertTailList(&Mutex->WaitingList, &pCurrentThread->ReadyList);
+
         ThreadTakeBlockLock();
         LockRelease(&Mutex->MutexLock, dummyState);
+        pCurrentThread->WaitedMutex = Mutex;
+        ThreadDonatePriority(pCurrentThread, Mutex->Holder);
         ThreadBlock();
+        pCurrentThread->WaitedMutex = NULL;
         LockAcquire(&Mutex->MutexLock, &dummyState );
     }
+
+    InsertTailList(&pCurrentThread->AcquiredMutexList, &Mutex->AcquiredMutexListElem);
 
     _Analysis_assume_lock_acquired_(*Mutex);
 
@@ -91,6 +97,11 @@ MutexRelease(
     pEntry = NULL;
 
     LockAcquire(&Mutex->MutexLock, &oldState);
+
+    RemoveEntryList(&Mutex->AcquiredMutexListElem);
+    ThreadRecomputePriority();
+
+
 
     pEntry = RemoveHeadList(&Mutex->WaitingList);
     if (pEntry != &Mutex->WaitingList)

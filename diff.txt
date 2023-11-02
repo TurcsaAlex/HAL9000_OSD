@@ -1,0 +1,36 @@
+diff --git a/src/HAL9000/headers/mutex.h b/src/HAL9000/headers/mutex.h
+index 81c81a5..d4ce96a 100644
+--- a/src/HAL9000/headers/mutex.h
++++ b/src/HAL9000/headers/mutex.h
+@@ -13,6 +13,7 @@ typedef struct _MUTEX
+     _Guarded_by_(MutexLock)
+     LIST_ENTRY          WaitingList;
+     struct _THREAD*     Holder;
++    LIST_ENTRY AcquiredMutexListElem; // elem in list of mutexes acq
+ } MUTEX, *PMUTEX;
+ 
+ //******************************************************************************
+diff --git a/src/HAL9000/headers/thread_internal.h b/src/HAL9000/headers/thread_internal.h
+index be2588a..43512a0 100644
+--- a/src/HAL9000/headers/thread_internal.h
++++ b/src/HAL9000/headers/thread_internal.h
+@@ -4,6 +4,7 @@
+ #include "ref_cnt.h"
+ #include "ex_event.h"
+ #include "thread.h"
++#include "mutex.h"
+ 
+ typedef enum _THREAD_STATE
+ {
+@@ -50,6 +51,11 @@ typedef struct _THREAD
+ 
+     volatile THREAD_FLAGS   Flags;
+ 
++    _Guarded_by_(PriorityProtectionLock)
++    THREAD_PRIORITY RealPriority; // the real ( original ) priority
++    LIST_ENTRY AcquiredMutexesList; // the list of mutexes held
++    PMUTEX WaitedMutex ; // the mutex thread waits for
++
+     // Lock which ensures there are no race conditions between a thread that
+     // blocks and a thread on another CPU which wants to unblock it
+     LOCK                    BlockLock;
