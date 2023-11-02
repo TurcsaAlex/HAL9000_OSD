@@ -1,4 +1,5 @@
 #pragma once
+#include "ex_event.h"
 
 typedef enum _EX_TIMER_TYPE
 {
@@ -17,10 +18,29 @@ typedef struct _EX_TIMER
     QWORD               ReloadTimeUs;
 
     EX_TIMER_TYPE       Type;
+    
+    // list of waiting/blocked threads for a specific timer
+
+    EX_EVENT            TimerEvent;
+    //for placing timer in global timers list
+    LIST_ENTRY          TimerListElem;
 
     volatile BOOLEAN    TimerStarted;
     BOOLEAN             TimerUninited;
 } EX_TIMER, *PEX_TIMER;
+//Module1:Threads
+// creating global list of timers
+typedef struct _GLOBAL_TIMER_LIST
+{
+    // for protecting list access
+    LOCK TimerListLock;
+    
+    //head of the list
+   
+
+    LIST_ENTRY          TimerListHead;
+   
+}GLOBAL_TIMER_LIST,*PGLOBAL_TIMER_LIST;
 
 //******************************************************************************
 // Function:     ExTimerInit
@@ -64,6 +84,7 @@ ExTimerStart(
     IN      PEX_TIMER       Timer
     );
 
+
 //******************************************************************************
 // Function:     ExTimerStop
 // Description:  Stops the timer countdown. All the threads waiting must be
@@ -86,8 +107,7 @@ ExTimerStop(
 //******************************************************************************
 void
 ExTimerWait(
-    INOUT   PEX_TIMER       Timer
-    );
+    INOUT   PEX_TIMER       Timer);
 
 //******************************************************************************
 // Function:     ExTimerUninit
@@ -116,3 +136,21 @@ ExTimerCompareTimers(
     IN      PEX_TIMER     FirstElem,
     IN      PEX_TIMER     SecondElem
     );
+//Module1: Threads
+//adding these 2 functions to the header file as they will be used in other files
+
+void ExTimerSystemPreinit();
+INT64
+ExTimerCompareListElems(
+    IN PLIST_ENTRY FirstListElem,
+    IN PLIST_ENTRY SecondListElem,
+    IN_OPT PVOID Context
+);
+void ExTimerCheckAll();
+
+STATUS
+EXTimerCheck(
+    IN      PLIST_ENTRY     TimerEntry,
+    IN_OPT PVOID           Context
+
+);
