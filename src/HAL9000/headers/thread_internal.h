@@ -4,6 +4,7 @@
 #include "ref_cnt.h"
 #include "ex_event.h"
 #include "thread.h"
+#include "mutex.h"
 
 typedef enum _THREAD_STATE
 {
@@ -40,9 +41,14 @@ typedef struct _THREAD
     TID                     Id;
     char*                   Name;
 
+    LOCK PriorityProtectionLock;
+
     // Currently the thread priority is not used for anything
+    _Guarded_by_(PriorityProtectionLock)
     THREAD_PRIORITY         Priority;
     THREAD_STATE            State;
+
+    PMUTEX WaitedMutex;
 
     // valid only if State == ThreadStateTerminated
     STATUS                  ExitStatus;
@@ -50,6 +56,9 @@ typedef struct _THREAD
 
     volatile THREAD_FLAGS   Flags;
 
+    _Guarded_by_(PriorityProtectionLock)
+    THREAD_PRIORITY RealPriority; // the real ( original ) priority
+    LIST_ENTRY AcquiredMutexList; // the list of mutexes held
     // Lock which ensures there are no race conditions between a thread that
     // blocks and a thread on another CPU which wants to unblock it
     LOCK                    BlockLock;
@@ -282,3 +291,14 @@ void
 ThreadSetPriority(
     IN      THREAD_PRIORITY     NewPriority
     );
+
+
+void
+ThreadDonatePriority(
+    PTHREAD Donor,
+    PTHREAD Reciever
+);
+
+
+void
+ThreadRecomputePriority();
